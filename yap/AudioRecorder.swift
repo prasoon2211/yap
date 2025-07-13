@@ -66,41 +66,49 @@ class AudioRecorder: NSObject, ObservableObject {
         recordingData = Data()
         isRecording = true
         
-        // Stop and reset engine first
+        // Stop and reset engine completely to handle device changes
         audioEngine.stop()
         audioEngine.reset()
         
+        // Create a fresh engine instance to handle device switches properly
+        audioEngine = AVAudioEngine()
+        
         let inputNode = audioEngine.inputNode
-        let inputFormat = inputNode.outputFormat(forBus: 0)
         
-        print("Input format: \(inputFormat.sampleRate) Hz, \(inputFormat.channelCount) channels")
-        
-        // Check if we have valid input
-        guard inputFormat.channelCount > 0 else {
-            print("No input channels available")
-            isRecording = false
-            return
-        }
-        
-        // Remove any existing tap first
-        inputNode.removeTap(onBus: 0)
-        
-        // Install tap with proper format
-        inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, _ in
-            self?.processAudioBuffer(buffer)
-        }
-        
-        print("Audio tap installed successfully")
-        
-        do {
-            // Prepare and start the audio engine
-            audioEngine.prepare()
-            try audioEngine.start()
-            print("Audio engine started successfully")
-            print("Audio engine running: \(audioEngine.isRunning)")
-        } catch {
-            print("Failed to start audio engine: \(error)")
-            isRecording = false
+        // Give the system a moment to initialize the new input device
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { [weak self] in
+            guard let self = self, self.isRecording else { return }
+            
+            let inputFormat = inputNode.outputFormat(forBus: 0)
+            print("Input format: \(inputFormat.sampleRate) Hz, \(inputFormat.channelCount) channels")
+            
+            // Check if we have valid input
+            guard inputFormat.channelCount > 0 && inputFormat.sampleRate > 0 else {
+                print("Invalid input format - channels: \(inputFormat.channelCount), sampleRate: \(inputFormat.sampleRate)")
+                self.isRecording = false
+                return
+            }
+            
+            // Remove any existing tap first
+            inputNode.removeTap(onBus: 0)
+            
+            // Install tap with proper format
+            inputNode.installTap(onBus: 0, bufferSize: 1024, format: inputFormat) { [weak self] buffer, _ in
+                self?.processAudioBuffer(buffer)
+            }
+            
+            print("Audio tap installed successfully")
+            
+            do {
+                // Prepare and start the audio engine
+                self.audioEngine.prepare()
+                try self.audioEngine.start()
+                print("Audio engine started successfully")
+                print("Audio engine running: \(self.audioEngine.isRunning)")
+            } catch {
+                print("Failed to start audio engine: \(error)")
+                self.isRecording = false
+            }
         }
     }
     

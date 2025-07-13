@@ -84,7 +84,12 @@ class HotkeyManager: ObservableObject {
         isRecording = true
         // Play start sound
         NSSound(named: NSSound.Name("Pop"))?.play()
-        audioRecorder.startRecording()
+        
+        // Small delay to let the sound play before starting audio engine
+        // This prevents conflicts with Bluetooth devices switching to call mode
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+            self.audioRecorder.startRecording()
+        }
     }
     
     private func stopRecording() {
