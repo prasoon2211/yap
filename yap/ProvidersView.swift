@@ -50,6 +50,10 @@ struct ProvidersView: View {
                 }
                 .padding(.horizontal, 24)
 
+                // Requirements Notice
+                RequirementsNotice()
+                    .padding(.horizontal, 24)
+
                 // Info Section
                 InfoSection()
                     .padding(.horizontal, 24)
@@ -76,74 +80,79 @@ struct ProviderCard: View {
     let onAddKey: () -> Void
 
     var body: some View {
-        VStack(spacing: 16) {
-            // Provider Header
-            HStack(spacing: 12) {
-                Circle()
-                    .fill(providerColor.opacity(0.2))
-                    .frame(width: 40, height: 40)
-                    .overlay(
-                        Image(systemName: providerIcon)
-                            .font(.title2)
-                            .foregroundColor(providerColor)
-                    )
+        VStack(spacing: 0) {
+            // Header with provider info and requirement badge
+            VStack(spacing: 12) {
+                HStack(spacing: 12) {
+                    Circle()
+                        .fill(providerColor.opacity(0.15))
+                        .frame(width: 44, height: 44)
+                        .overlay(
+                            Image(systemName: providerIcon)
+                                .font(.title2)
+                                .foregroundColor(providerColor)
+                        )
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(providerDisplayName)
-                        .font(.headline)
-                        .fontWeight(.semibold)
+                    VStack(alignment: .leading, spacing: 3) {
+                        HStack(spacing: 8) {
+                            Text(providerDisplayName)
+                                .font(.system(size: 16, weight: .semibold))
 
-                    Text(providerDescription)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                        .lineLimit(2)
+                            // Required/Optional badge
+                            Text(isRequired ? "Required" : "Optional")
+                                .font(.system(size: 10, weight: .medium))
+                                .foregroundColor(isRequired ? .white : .secondary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(isRequired ? Color.red : Color.gray.opacity(0.3))
+                                .clipShape(RoundedRectangle(cornerRadius: 8))
+                        }
+
+                        Text(providerDescription)
+                            .font(.system(size: 12))
+                            .foregroundColor(.secondary)
+                            .lineLimit(1)
+                    }
+
+                    Spacer(minLength: 0)
                 }
 
-                Spacer()
-            }
-
-            // Status Section
-            VStack(spacing: 8) {
-                HStack {
-                    StatusBadge(isConfigured: isProviderConfigured)
-                    Spacer()
-                }
-
+                // Status and action
                 if isProviderConfigured {
                     HStack(spacing: 8) {
                         Image(systemName: "checkmark.circle.fill")
                             .foregroundColor(.green)
-                            .font(.caption)
-                        Text("API key configured")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                            .font(.system(size: 14))
+                        Text("Connected")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundColor(.green)
                         Spacer()
                     }
                 } else {
                     Button(action: onAddKey) {
-                        HStack {
+                        HStack(spacing: 6) {
                             Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 12))
                             Text("Add API Key")
-                                .fontWeight(.medium)
+                                .font(.system(size: 13, weight: .medium))
                         }
-                        .font(.caption)
                         .foregroundColor(.white)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 8)
                         .background(providerColor)
-                        .clipShape(RoundedRectangle(cornerRadius: 6))
+                        .clipShape(RoundedRectangle(cornerRadius: 8))
                     }
                     .buttonStyle(.plain)
                 }
             }
+            .padding(16)
         }
-        .padding(16)
         .frame(height: 140)
         .background(Color(NSColor.controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
             RoundedRectangle(cornerRadius: 12)
-                .stroke(isProviderConfigured ? .green.opacity(0.3) : .clear, lineWidth: 1)
+                .stroke(strokeColor, lineWidth: strokeWidth)
         )
     }
 
@@ -186,26 +195,55 @@ struct ProviderCard: View {
             return configManager.apiKeyStatus[provider] ?? false
         }
     }
+
+    private var isRequired: Bool {
+        provider == .groq
+    }
+
+    private var strokeColor: Color {
+        if isRequired && !isProviderConfigured {
+            return .red.opacity(0.4)
+        } else if isProviderConfigured {
+            return .green.opacity(0.3)
+        } else {
+            return .clear
+        }
+    }
+
+    private var strokeWidth: CGFloat {
+        if isRequired && !isProviderConfigured {
+            return 1.5
+        } else if isProviderConfigured {
+            return 1
+        } else {
+            return 0
+        }
+    }
 }
 
-struct StatusBadge: View {
-    let isConfigured: Bool
-
+struct RequirementsNotice: View {
     var body: some View {
-        HStack(spacing: 4) {
-            Circle()
-                .fill(isConfigured ? Color.green : Color.orange)
-                .frame(width: 6, height: 6)
+        HStack(spacing: 12) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .foregroundColor(.orange)
+                .font(.title3)
 
-            Text(isConfigured ? "Connected" : "Not configured")
-                .font(.caption2)
-                .fontWeight(.medium)
-                .foregroundColor(isConfigured ? Color.green : Color.orange)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Groq API Key Required")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(.primary)
+
+                Text("Groq provides the speech-to-text transcription service. Other providers are optional for text cleanup.")
+                    .font(.system(size: 12))
+                    .foregroundColor(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+
+            Spacer()
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .background((isConfigured ? Color.green : Color.orange).opacity(0.1))
-        .clipShape(RoundedRectangle(cornerRadius: 8))
+        .padding(16)
+        .background(Color.orange.opacity(0.08))
+        .clipShape(RoundedRectangle(cornerRadius: 12))
     }
 }
 
