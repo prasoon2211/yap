@@ -2,7 +2,9 @@ import Foundation
 
 class ConfigurationManager: ObservableObject {
     @Published var selectedLLMModel: LLMModel = .groqLlama31_8B
-    @Published var cleanupInstructions = """
+    /// Default cleanup prompt shown to the user. Declared as a static constant so
+    /// it can be reused across the code-base (e.g. when the user taps “Reset to Default”).
+    static let defaultCleanupInstructions = """
 You are a text-cleaning assistant. I will provide you with a transcript from a speech-to-text program. Your task is to clean up the transcript by fixing typos, grammar, punctuation, and formatting while preserving the original meaning.
 
 IMPORTANT INSTRUCTIONS:
@@ -12,6 +14,10 @@ IMPORTANT INSTRUCTIONS:
 
 Here is the transcript:
 """
+
+    /// The user-customisable cleanup instructions. Defaults to
+    /// `defaultCleanupInstructions` but can be edited at runtime.
+    @Published var cleanupInstructions = defaultCleanupInstructions
     @Published var cleanupEnabled = true
     @Published var apiKeyStatus: [LLMProvider: Bool] = [:]
 
