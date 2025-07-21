@@ -153,7 +153,10 @@ class AudioRecorder: NSObject, ObservableObject {
         
         for i in stride(from: 0, to: frameCount, by: downsampleRatio) {
             let sample = channelData[i]
-            let int16Sample = Int16(sample * 32767.0)
+            // Clamp the sample to valid range [-1.0, 1.0] before converting
+            let clampedSample = max(-1.0, min(1.0, sample))
+            let scaledSample = clampedSample * 32767.0
+            let int16Sample = Int16(scaledSample)
             int16Data.append(contentsOf: withUnsafeBytes(of: int16Sample.littleEndian) { Data($0) })
         }
         

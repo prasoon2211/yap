@@ -5,14 +5,22 @@ import AppKit
 class HotkeyManager: ObservableObject {
     @Published var isRecording = false
     @Published var isUploading = false
+    @Published var isCleaningUp = false
     
     private var eventHotkey: EventHotKeyRef?
     private var eventHandler: EventHandlerRef?
     private let audioRecorder = AudioRecorder()
     let groqService = GroqService()
+    private let configManager: ConfigurationManager
+    private var llmService: LLMService?
     
-    init() {
+    init(configManager: ConfigurationManager) {
+        self.configManager = configManager
         setupHotkey()
+    }
+    
+    func setLLMService(_ llmService: LLMService) {
+        self.llmService = llmService
     }
     
     deinit {
@@ -116,9 +124,7 @@ class HotkeyManager: ObservableObject {
                 switch result {
                 case .success(let transcript):
                     print("Transcription successful: \"\(transcript)\"")
-                    ClipboardManager.copyToClipboard(transcript)
-                    // Play success sound
-                    NSSound(named: NSSound.Name("Ping"))?.play()
+                    self?.processTranscript(transcript)
                     
                 case .failure(let error):
                     print("Transcription failed: \(error)")
@@ -127,6 +133,53 @@ class HotkeyManager: ObservableObject {
                 }
             }
         }
+    }
+    
+    private func processTranscript(_ transcript: String) {
+        // Check if cleanup is enabled and we have an LLM service
+        guard configManager.cleanupEnabled,
+              let llmService = self.llmService else {
+            // No cleanup - copy original transcript and finish
+            finishWithTranscript(transcript)
+            return
+        }
+        
+        // Check if the selected provider is configured
+        let provider = llmService.selectedModel.provider
+        if provider != .groq && !configManager.hasAPIKey(for: provider) {
+            // Provider not configured - fall back to original transcript
+            print("LLM provider \(provider.rawValue) not configured, using original transcript")
+            finishWithTranscript(transcript)
+            return
+        }
+        
+        // Proceed with cleanup
+        isCleaningUp = true
+        print("Cleaning up transcript with \(llmService.selectedModel.rawValue)...")
+        
+        llmService.cleanupText(transcript) { [weak self] result in
+            DispatchQueue.main.async {
+                self?.isCleaningUp = false
+                
+                switch result {
+                case .success(let cleanedTranscript):
+                    print("Cleanup successful")
+                    self?.finishWithTranscript(cleanedTranscript)
+                    
+                case .failure(let error):
+                    print("Cleanup failed: \(error)")
+                    // Fall back to original transcript
+                    self?.finishWithTranscript(transcript)
+                }
+            }
+        }
+    }
+    
+    private func finishWithTranscript(_ transcript: String) {
+        ClipboardManager.copyToClipboard(transcript)
+        // Play success sound
+        NSSound(named: NSSound.Name("Ping"))?.play()
+        print("Final transcript copied to clipboard: \"\(transcript)\"")
     }
     
     private func cleanup() {
