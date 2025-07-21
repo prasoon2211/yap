@@ -138,6 +138,7 @@ struct ProviderCard: View {
             }
         }
         .padding(16)
+        .frame(height: 140)
         .background(Color(NSColor.controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 12))
         .overlay(
