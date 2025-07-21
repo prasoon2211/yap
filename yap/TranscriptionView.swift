@@ -44,10 +44,13 @@ struct TranscriptionView: View {
                 )
                 .padding(.horizontal, 24)
 
-                // Recording Tips
-                RecordingTipsSection()
-                    .padding(.horizontal, 24)
-                    .padding(.bottom, 20)
+                // Cleanup Instructions
+                CleanupInstructionsSection(
+                    configManager: configManager,
+                    llmService: llmService
+                )
+                .padding(.horizontal, 24)
+                .padding(.bottom, 20)
             }
         }
     }
@@ -126,30 +129,6 @@ struct TranscriptionCard: View {
                 modelInfo
                 Spacer()
                 hotkeyInfo
-            }
-
-            // Performance Info
-            HStack(spacing: 16) {
-                PerformanceMetric(
-                    icon: "bolt.fill",
-                    title: "Speed",
-                    value: "6.3x faster",
-                    color: .orange
-                )
-
-                PerformanceMetric(
-                    icon: "target",
-                    title: "Accuracy",
-                    value: "High",
-                    color: .green
-                )
-
-                PerformanceMetric(
-                    icon: "globe",
-                    title: "Language",
-                    value: "English",
-                    color: .blue
-                )
             }
         }
     }
@@ -529,61 +508,204 @@ struct ModelRow: View {
     }
 }
 
-struct RecordingTipsSection: View {
+struct CleanupInstructionsSection: View {
+    @ObservedObject var configManager: ConfigurationManager
+    @ObservedObject var llmService: LLMService
+    @State private var showingInstructionsEditor = false
+
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: 16) {
+            // Header
             HStack {
-                Image(systemName: "lightbulb.fill")
-                    .foregroundColor(.yellow)
-                Text("Recording Tips")
-                    .font(.headline)
-                    .fontWeight(.semibold)
+                Circle()
+                    .fill(Color.purple.opacity(0.2))
+                    .frame(width: 40, height: 40)
+                    .overlay(
+                        Image(systemName: "doc.text.fill")
+                            .font(.title2)
+                            .foregroundColor(.purple)
+                    )
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Cleanup Instructions")
+                        .font(.headline)
+                        .fontWeight(.semibold)
+
+                    Text("Customize how AI models clean up your transcriptions")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
                 Spacer()
             }
 
+            Divider()
+
+            // Preview
             VStack(alignment: .leading, spacing: 8) {
-                TipRow(
-                    icon: "mic.fill",
-                    tip: "Speak clearly and at a normal pace for best results"
-                )
+                HStack {
+                    Text("Current Instructions")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
 
-                TipRow(
-                    icon: "speaker.wave.2.fill",
-                    tip: "Find a quiet environment to minimize background noise"
-                )
+                    Spacer()
 
-                TipRow(
-                    icon: "timer",
-                    tip: "Optimal recording length is 10-30 seconds"
-                )
+                    Text("\(configManager.cleanupInstructions.count) characters")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
 
-                TipRow(
-                    icon: "keyboard",
-                    tip: "Hold ⇧⌘Space to start, release to stop and transcribe"
-                )
+                ScrollView {
+                    Text(configManager.cleanupInstructions)
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                .frame(height: 80)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color.gray.opacity(0.1))
+                .clipShape(RoundedRectangle(cornerRadius: 8))
+            }
+
+            // Actions
+            HStack(spacing: 12) {
+                Button("Edit Instructions") {
+                    showingInstructionsEditor = true
+                }
+                .buttonStyle(.bordered)
+
+                Button("Reset to Default") {
+                    configManager.cleanupInstructions = ConfigurationManager.defaultCleanupInstructions
+                    llmService.saveSettings()
+                }
+                .buttonStyle(.bordered)
+                .foregroundColor(.orange)
             }
         }
         .padding(16)
-        .background(Color.yellow.opacity(0.05))
+        .background(Color(NSColor.controlBackgroundColor))
         .clipShape(RoundedRectangle(cornerRadius: 12))
+        .sheet(isPresented: $showingInstructionsEditor) {
+            InstructionsEditorSheet(
+                configManager: configManager,
+                llmService: llmService,
+                isPresented: $showingInstructionsEditor
+            )
+        }
     }
 }
 
-struct TipRow: View {
-    let icon: String
-    let tip: String
+struct InstructionsEditorSheet: View {
+    @ObservedObject var configManager: ConfigurationManager
+    @ObservedObject var llmService: LLMService
+    @Binding var isPresented: Bool
+
+    @State private var instructions: String = ""
+    @State private var hasChanges = false
 
     var body: some View {
-        HStack(spacing: 12) {
-            Image(systemName: icon)
-                .foregroundColor(.yellow)
-                .frame(width: 16)
+        VStack(spacing: 20) {
+            // Header
+            HStack {
+                VStack(alignment: .leading) {
+                    Text("Edit Cleanup Instructions")
+                        .font(.title2)
+                        .fontWeight(.semibold)
 
-            Text(tip)
-                .font(.subheadline)
-                .foregroundColor(.primary)
+                    Text("These instructions guide AI models on how to clean up your transcriptions")
+                        .font(.subheadline)
+                        .foregroundColor(.secondary)
+                }
+
+                Spacer()
+            }
+
+            // Editor
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Text("Instructions")
+                        .font(.headline)
+
+                    Spacer()
+
+                    Text("\(instructions.count) characters")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                }
+
+                TextEditor(text: $instructions)
+                    .font(.system(.body, design: .default))
+                    .padding(8)
+                    .background(Color(NSColor.textBackgroundColor))
+                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 8)
+                            .stroke(Color.secondary.opacity(0.3), lineWidth: 1)
+                    )
+            }
+
+            // Tips
+            VStack(alignment: .leading, spacing: 8) {
+                HStack {
+                    Image(systemName: "lightbulb.fill")
+                        .foregroundColor(.yellow)
+                    Text("Tips for Better Instructions")
+                        .font(.subheadline)
+                        .fontWeight(.medium)
+                    Spacer()
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("• Be specific about formatting preferences")
+                    Text("• Include examples of desired output")
+                    Text("• Mention any technical terms to preserve")
+                    Text("• Specify punctuation and capitalization rules")
+                }
+                .font(.caption)
+                .foregroundColor(.secondary)
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 12)
+            .background(Color.yellow.opacity(0.05))
+            .clipShape(RoundedRectangle(cornerRadius: 8))
 
             Spacer()
+
+            // Buttons
+            HStack(spacing: 12) {
+                Button("Cancel") {
+                    isPresented = false
+                }
+                .keyboardShortcut(.escape)
+
+                Button("Reset to Default") {
+                    instructions = ConfigurationManager.defaultCleanupInstructions
+                    hasChanges = true
+                }
+                .foregroundColor(.orange)
+
+                Button("Save Instructions") {
+                    saveInstructions()
+                }
+                .keyboardShortcut(.return)
+                .disabled(!hasChanges)
+                .buttonStyle(.borderedProminent)
+            }
         }
+        .padding(24)
+        .frame(width: 600, height: 500)
+        .onAppear {
+            instructions = configManager.cleanupInstructions
+        }
+        .onChange(of: instructions) {
+            hasChanges = instructions != configManager.cleanupInstructions
+        }
+    }
+
+    private func saveInstructions() {
+        configManager.cleanupInstructions = instructions
+        llmService.saveSettings()
+        isPresented = false
     }
 }

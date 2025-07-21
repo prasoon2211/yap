@@ -77,13 +77,7 @@ struct HeaderView: View {
                 // App Icon & Title
                 HStack(spacing: 12) {
                     Circle()
-                        .fill(
-                            LinearGradient(
-                                colors: [.blue, .purple],
-                                startPoint: .topLeading,
-                                endPoint: .bottomTrailing
-                            )
-                        )
+                        .fill(Color.accentColor)
                         .frame(width: 40, height: 40)
                         .overlay(
                             Image(systemName: "mic.fill")
@@ -96,10 +90,6 @@ struct HeaderView: View {
                             .font(.title2)
                             .fontWeight(.bold)
                             .foregroundColor(.primary)
-
-                        Text("Speech-to-Text Assistant")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
                     }
                 }
 
@@ -114,13 +104,7 @@ struct HeaderView: View {
         }
         .padding(.horizontal, 24)
         .padding(.vertical, 20)
-        .background(
-            LinearGradient(
-                colors: [Color(NSColor.windowBackgroundColor), Color(NSColor.controlBackgroundColor)],
-                startPoint: .top,
-                endPoint: .bottom
-            )
-        )
+        .background(Color(NSColor.windowBackgroundColor))
     }
 }
 
@@ -230,5 +214,6 @@ struct TabButton: View {
             )
         }
         .buttonStyle(.plain)
+        .focusable(false)
     }
 }
