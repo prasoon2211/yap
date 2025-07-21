@@ -47,6 +47,14 @@ struct yapApp: App {
             )
             .onAppear {
                 windowManager.windowIsVisible = true
+                // Make sure the window appears on top
+                DispatchQueue.main.async {
+                    if let mainWindow = NSApp.windows.first(where: { $0.identifier?.rawValue == "main-window" }) {
+                        mainWindow.level = NSWindow.Level.floating
+                        mainWindow.makeKeyAndOrderFront(nil)
+                        NSApp.activate(ignoringOtherApps: true)
+                    }
+                }
             }
             .onDisappear {
                 windowManager.windowIsVisible = false

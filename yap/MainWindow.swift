@@ -11,13 +11,11 @@ struct MainWindow: View {
     enum Tab: String, CaseIterable {
         case providers = "Providers"
         case transcription = "Transcription"
-        case settings = "Settings"
 
         var icon: String {
             switch self {
             case .providers: return "key.fill"
             case .transcription: return "mic.fill"
-            case .settings: return "gear"
             }
         }
     }
@@ -51,11 +49,6 @@ struct MainWindow: View {
                     TranscriptionView(
                         configManager: configManager,
                         hotkeyManager: hotkeyManager,
-                        llmService: llmService
-                    )
-                case .settings:
-                    SettingsView(
-                        configManager: configManager,
                         llmService: llmService
                     )
                 }
@@ -212,6 +205,7 @@ struct TabButton: View {
                     .animation(.easeInOut(duration: 0.2), value: isSelected),
                 alignment: .bottom
             )
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .focusable(false)
